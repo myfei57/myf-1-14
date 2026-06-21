@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Bot, Heart, Scale, Gauge, Layers, AlertTriangle, Sparkles, BadgeCheck } from 'lucide-react';
+import { Bot, Heart, Scale, Gauge, Layers, AlertTriangle, Sparkles, BadgeCheck, ShieldCheck, AlertOctagon } from 'lucide-react';
 import type { Robot } from '../types';
 import { useGameStore } from '../store/useGameStore';
 import { StatBar } from './StatBar';
@@ -36,6 +36,9 @@ export function RobotCard({ robot, onClick, selected = false, showDetails = fals
   );
 
   const topTag = identity.tags.find((t) => t.active && t.tag.tier === 'positive');
+  const robotAccidentCount = accidentRecords.filter(
+    (r) => r.robotId === robot.id
+  ).length;
 
   const durabilityPercent = (robot.durability / robot.maxDurability) * 100;
   const durabilityColor =
@@ -87,6 +90,16 @@ export function RobotCard({ robot, onClick, selected = false, showDetails = fals
               <BadgeCheck className="w-3 h-3" />
               {identity.tier.name} · {identity.reputation}
             </span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-neon-green/20 text-neon-green flex items-center gap-1">
+              <ShieldCheck className="w-3 h-3" />
+              信任 {identity.trust}
+            </span>
+            {robotAccidentCount > 0 && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-neon-red/20 text-neon-red flex items-center gap-1">
+                <AlertOctagon className="w-3 h-3" />
+                事故 {robotAccidentCount}
+              </span>
+            )}
             {topTag && (
               <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-neon-green/20 text-neon-green">
                 {topTag.tag.name}

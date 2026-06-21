@@ -18,6 +18,7 @@ import type {
   TagEvaluation,
   TimelineEvent,
   RobotIdentityResult,
+  RewardBreakdown,
   MissionRecommendation,
   MissionType,
   Exhibition,
@@ -292,6 +293,59 @@ export function getReputationTier(reputation: number): ReputationTier {
 
 export function getIdentityTag(id: IdentityTagId): IdentityTag {
   return TAG_MAP[id];
+}
+
+export function getRewardBreakdown(identity: RobotIdentityResult): RewardBreakdown {
+  const baseReputation = IDENTITY_BASE_REPUTATION;
+  const reputation = identity.reputation;
+  const reputationDelta = reputation - baseReputation;
+  const positiveTags = identity.positiveTagCount;
+  const negativeTags = identity.negativeTagCount;
+  const tagTrustDelta = (positiveTags - negativeTags) * 2;
+
+  const accidentCount = identity.stats.accidentCount;
+  const severeAccidents = identity.stats.severeAccidents;
+  const accidentEvents = identity.timeline.filter((e) => e.category === 'accident');
+  const accidentReputationLoss = accidentEvents.reduce(
+    (sum, e) => sum + Math.abs(e.delta),
+    0
+  );
+
+  const reasons: string[] = [];
+  if (accidentCount > 0) {
+    reasons.push(
+      `事故档案 ${accidentCount} 次（严重 ${severeAccidents}），声誉 -${accidentReputationLoss}`
+    );
+  }
+  if (positiveTags > 0) {
+    reasons.push(`正向身份标签 ${positiveTags} 个，信任 +${positiveTags * 2}`);
+  }
+  if (negativeTags > 0) {
+    reasons.push(`负向身份标签 ${negativeTags} 个，信任 -${negativeTags * 2}`);
+  }
+  if (reputationDelta !== 0) {
+    reasons.push(
+      `声誉 ${reputationDelta > 0 ? '+' : ''}${reputationDelta}（基线 ${baseReputation} → ${reputation}）`
+    );
+  }
+  if (reasons.length === 0) {
+    reasons.push('声誉与标签均衡，倍率处于基线水平');
+  }
+
+  return {
+    baseReputation,
+    reputation,
+    reputationDelta,
+    trust: identity.trust,
+    multiplier: identity.rewardMultiplier,
+    positiveTags,
+    negativeTags,
+    tagTrustDelta,
+    accidentCount,
+    severeAccidents,
+    accidentReputationLoss,
+    reasons,
+  };
 }
 
 function buildIdentityStats(

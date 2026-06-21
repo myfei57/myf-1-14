@@ -67,6 +67,8 @@ export interface MissionRecord {
   adaptability: number;
   rewards: { credits: number; materials: number };
   durabilityLoss: number;
+  rewardMultiplier: number;
+  trust: number;
   completedAt: number;
 }
 
@@ -277,6 +279,21 @@ export interface RobotIdentityResult {
   timeline: TimelineEvent[];
   positiveTagCount: number;
   negativeTagCount: number;
+}
+
+export interface RewardBreakdown {
+  baseReputation: number;
+  reputation: number;
+  reputationDelta: number;
+  trust: number;
+  multiplier: number;
+  positiveTags: number;
+  negativeTags: number;
+  tagTrustDelta: number;
+  accidentCount: number;
+  severeAccidents: number;
+  accidentReputationLoss: number;
+  reasons: string[];
 }
 
 export interface MissionRecommendation {

@@ -18,6 +18,9 @@ import {
   RotateCcw,
   History,
   BadgeCheck,
+  ShieldCheck,
+  Coins,
+  AlertOctagon,
 } from 'lucide-react';
 import { PageContainer } from '../components/PageContainer';
 import { RobotCard } from '../components/RobotCard';
@@ -25,7 +28,7 @@ import { StatBar } from '../components/StatBar';
 import { Modal } from '../components/Modal';
 import { useGameStore } from '../store/useGameStore';
 import { MISSIONS } from '../data/defaultConfig';
-import { formatDate } from '../utils/helpers';
+import { formatDate, getRewardBreakdown } from '../utils/helpers';
 import type { MissionType, Robot, Mission, MissionRecord } from '../types';
 
 const missionIcons: Record<MissionType, typeof Package> = {
@@ -104,6 +107,26 @@ export function MissionsPage() {
   ]);
 
   const multiplier = selectedIdentity?.rewardMultiplier ?? 1;
+
+  const breakdown = useMemo(
+    () => (selectedIdentity ? getRewardBreakdown(selectedIdentity) : null),
+    [selectedIdentity]
+  );
+
+  const robotAccidents = useMemo(() => {
+    if (!selectedRobot) return [];
+    return accidentRecords
+      .filter((r) => r.robotId === selectedRobot.id)
+      .sort((a, b) => b.recordedAt - a.recordedAt);
+  }, [accidentRecords, selectedRobot]);
+
+  const accidentTypeCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const rec of robotAccidents) {
+      counts[rec.accidentTypeName] = (counts[rec.accidentTypeName] ?? 0) + 1;
+    }
+    return Object.entries(counts);
+  }, [robotAccidents]);
 
   const handleExecuteMission = () => {
     if (!selectedRobot || !selectedMission) return;
@@ -306,25 +329,99 @@ export function MissionsPage() {
                     </p>
                   </div>
 
-                  <div className="mb-6 flex items-center justify-between p-3 bg-background-tertiary rounded-xl">
-                    <div className="flex items-center gap-2">
-                      <BadgeCheck className="w-4 h-4 text-neon-blue" />
-                      <span className="text-sm text-white/70">身份奖励倍率</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span
-                        className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
-                        style={{
-                          color: selectedIdentity?.tier.color,
-                          backgroundColor: `${selectedIdentity?.tier.color}22`,
-                        }}
-                      >
-                        {selectedIdentity?.tier.name}
+                  <div className="mb-6 rounded-xl bg-background-tertiary p-4 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <BadgeCheck className="w-4 h-4 text-neon-blue" />
+                        <span className="text-sm text-white/70">声誉等级</span>
+                        <span
+                          className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
+                          style={{
+                            color: selectedIdentity?.tier.color,
+                            backgroundColor: `${selectedIdentity?.tier.color}22`,
+                          }}
+                        >
+                          {selectedIdentity?.tier.name}
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-white/40 font-mono">
+                        声誉 {selectedIdentity?.reputation}
                       </span>
-                      <span className="font-mono font-bold text-lg text-neon-orange">
-                        ×{multiplier.toFixed(2)}
-                      </span>
                     </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-background rounded-lg p-2.5">
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <ShieldCheck className="w-3.5 h-3.5 text-neon-green" />
+                          <span className="text-[11px] text-white/50">客户信任</span>
+                        </div>
+                        <div className="flex items-baseline gap-1.5">
+                          <span className="font-mono font-bold text-lg text-neon-green">
+                            {selectedIdentity?.trust}
+                          </span>
+                          <span className="text-[10px] text-white/30">/100</span>
+                        </div>
+                        <div className="h-1.5 mt-1.5 rounded-full bg-white/5 overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-neon-green"
+                            style={{ width: `${selectedIdentity?.trust ?? 0}%` }}
+                          />
+                        </div>
+                      </div>
+                      <div className="bg-background rounded-lg p-2.5">
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <Coins className="w-3.5 h-3.5 text-neon-orange" />
+                          <span className="text-[11px] text-white/50">奖励倍率</span>
+                        </div>
+                        <span className="font-mono font-bold text-lg text-neon-orange">
+                          ×{multiplier.toFixed(2)}
+                        </span>
+                        <p className="text-[9px] text-white/30 mt-0.5">
+                          0.8 + 信任×0.7/100
+                        </p>
+                      </div>
+                    </div>
+
+                    {robotAccidents.length > 0 && (
+                      <div className="bg-neon-red/5 rounded-lg p-2.5 border border-neon-red/20">
+                        <div className="flex items-center gap-1.5 mb-1.5">
+                          <AlertOctagon className="w-3.5 h-3.5 text-neon-red" />
+                          <span className="text-[11px] text-white/60">
+                            事故来源 · {robotAccidents.length} 次（来源：事故档案）
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          {accidentTypeCounts.map(([name, count]) => (
+                            <span
+                              key={name}
+                              className="text-[10px] px-1.5 py-0.5 rounded-full bg-neon-red/15 text-neon-red"
+                            >
+                              {name} ×{count}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {breakdown && (
+                      <div className="bg-background rounded-lg p-2.5">
+                        <p className="text-[11px] text-white/50 mb-1.5 flex items-center gap-1.5">
+                          <AlertTriangle className="w-3.5 h-3.5 text-neon-yellow" />
+                          倍率变化原因
+                        </p>
+                        <ul className="space-y-1">
+                          {breakdown.reasons.map((r, i) => (
+                            <li
+                              key={i}
+                              className="text-[10px] text-white/60 flex items-start gap-1.5"
+                            >
+                              <span className="text-white/30 mt-px">•</span>
+                              <span>{r}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-2 gap-4 mb-6">
@@ -411,6 +508,23 @@ export function MissionsPage() {
                       适配度: {missionResult.adaptability}% | 耐久损耗: -{missionResult.durabilityLoss}
                     </p>
 
+                    <div className="flex items-center justify-center gap-4 mb-4 text-xs">
+                      <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-background-tertiary">
+                        <ShieldCheck className="w-3.5 h-3.5 text-neon-green" />
+                        <span className="text-white/50">结算信任</span>
+                        <span className="font-mono font-bold text-neon-green">
+                          {missionResult.trust ?? '—'}
+                        </span>
+                      </span>
+                      <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-background-tertiary">
+                        <Coins className="w-3.5 h-3.5 text-neon-orange" />
+                        <span className="text-white/50">结算倍率</span>
+                        <span className="font-mono font-bold text-neon-orange">
+                          ×{(missionResult.rewardMultiplier ?? 1).toFixed(2)}
+                        </span>
+                      </span>
+                    </div>
+
                     {missionResult.success && (
                       <div className="flex items-center justify-center gap-6 mb-4">
                         <div className="text-center">
@@ -479,7 +593,7 @@ export function MissionsPage() {
                     <span className="text-white/40">→</span>
                     <span className="text-neon-blue truncate">{record.robotName}</span>
                   </div>
-                  <div className="flex items-center gap-4 text-xs text-white/50">
+                  <div className="flex items-center gap-4 text-xs text-white/50 flex-wrap">
                     <span>适配度: {record.adaptability}%</span>
                     <span>耐久损耗: -{record.durabilityLoss}</span>
                     <span className="text-neon-orange">
@@ -487,6 +601,14 @@ export function MissionsPage() {
                     </span>
                     <span className="text-neon-green">
                       +{record.rewards.materials} 材料
+                    </span>
+                    <span className="flex items-center gap-1 text-neon-green/80">
+                      <ShieldCheck className="w-3 h-3" />
+                      信任 {record.trust ?? '—'}
+                    </span>
+                    <span className="flex items-center gap-1 text-neon-orange/80">
+                      <Coins className="w-3 h-3" />
+                      ×{(record.rewardMultiplier ?? 1).toFixed(2)}
                     </span>
                   </div>
                 </div>

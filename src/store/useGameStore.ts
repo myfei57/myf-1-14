@@ -266,6 +266,8 @@ export const useGameStore = create<Store>()(
           adaptability,
           rewards,
           durabilityLoss,
+          rewardMultiplier: multiplier,
+          trust: identity.trust,
           completedAt: Date.now(),
         };
         state.addMissionRecord(record);
