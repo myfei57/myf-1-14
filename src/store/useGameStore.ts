@@ -10,6 +10,8 @@ import type {
   RepairRecord,
   EthicsRecord,
   ExhibitionRecord,
+  AccidentRecord,
+  AccidentType,
   AssemblyPlan,
   GameConfig,
 } from '../types';
@@ -21,6 +23,7 @@ import {
   BLIND_BOX_PRICES,
   ETHICS_SCENARIOS,
   EXHIBITIONS,
+  ACCIDENT_TYPES,
 } from '../data/defaultConfig';
 import {
   generateId,
@@ -54,6 +57,7 @@ export const useGameStore = create<Store>()(
       assemblyPlans: [],
       ethicsRecords: [],
       exhibitionRecords: [],
+      accidentRecords: [],
       config: DEFAULT_CONFIG,
       selectedParts: { ...EMPTY_SELECTED_PARTS },
 
@@ -232,7 +236,8 @@ export const useGameStore = create<Store>()(
           state.missionRecords,
           state.repairRecords,
           state.ethicsRecords,
-          state.exhibitionRecords
+          state.exhibitionRecords,
+          state.accidentRecords
         );
         const multiplier = identity.rewardMultiplier;
 
@@ -365,6 +370,32 @@ export const useGameStore = create<Store>()(
         return record;
       },
 
+      recordAccident: (robotId, accidentType, description) => {
+        const state = get();
+        const robot = state.robots.find((r) => r.id === robotId);
+        if (!robot) {
+          throw new Error('Robot not found');
+        }
+        const typeConfig = ACCIDENT_TYPES.find((t) => t.id === accidentType);
+        if (!typeConfig) {
+          throw new Error('Accident type not found');
+        }
+
+        const record: AccidentRecord = {
+          id: generateId(),
+          robotId: robot.id,
+          robotName: robot.name,
+          accidentType: typeConfig.id,
+          accidentTypeName: typeConfig.name,
+          severity: typeConfig.severity,
+          description: description.trim() || typeConfig.description,
+          reputationChange: typeConfig.reputationChange,
+          recordedAt: Date.now(),
+        };
+        set((s) => ({ accidentRecords: [...s.accidentRecords, record] }));
+        return record;
+      },
+
       computeRobotIdentity: (robotId) => {
         const state = get();
         const robot = state.robots.find((r) => r.id === robotId);
@@ -373,7 +404,8 @@ export const useGameStore = create<Store>()(
           state.missionRecords,
           state.repairRecords,
           state.ethicsRecords,
-          state.exhibitionRecords
+          state.exhibitionRecords,
+          state.accidentRecords
         );
       },
 
@@ -386,7 +418,8 @@ export const useGameStore = create<Store>()(
           state.missionRecords,
           state.repairRecords,
           state.ethicsRecords,
-          state.exhibitionRecords
+          state.exhibitionRecords,
+          state.accidentRecords
         );
         return getMissionRecommendations(robot, state.config, identity);
       },
@@ -404,6 +437,7 @@ export const useGameStore = create<Store>()(
           assemblyPlans: [],
           ethicsRecords: [],
           exhibitionRecords: [],
+          accidentRecords: [],
           selectedParts: { ...EMPTY_SELECTED_PARTS },
         }),
     }),
@@ -419,6 +453,7 @@ export const useGameStore = create<Store>()(
         assemblyPlans: state.assemblyPlans,
         ethicsRecords: state.ethicsRecords,
         exhibitionRecords: state.exhibitionRecords,
+        accidentRecords: state.accidentRecords,
         config: state.config,
       }),
     }

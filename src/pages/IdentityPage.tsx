@@ -36,6 +36,7 @@ import {
   Dumbbell,
   Crosshair,
   Crown,
+  AlertOctagon,
   type LucideIcon,
 } from 'lucide-react';
 import { PageContainer } from '../components/PageContainer';
@@ -44,12 +45,15 @@ import {
   REPUTATION_TIERS,
   ETHICS_SCENARIOS,
   EXHIBITIONS,
+  ACCIDENT_TYPES,
 } from '../data/defaultConfig';
 import { formatDate } from '../utils/helpers';
 import type {
   Robot,
   EthicsRecord,
   ExhibitionRecord,
+  AccidentRecord,
+  AccidentType,
   IdentityCategory,
   MissionType,
 } from '../types';
@@ -77,6 +81,15 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Dumbbell,
   Crosshair,
   Crown,
+  AlertOctagon,
+};
+
+const TIMELINE_CATEGORY_LABEL: Record<string, string> = {
+  mission: '任务',
+  repair: '维修',
+  ethics: '伦理',
+  exhibition: '展示',
+  accident: '事故',
 };
 
 function IdentityIcon({ name, className }: { name: string; className?: string }) {
@@ -131,10 +144,11 @@ const missionTypeColor: Record<MissionType, string> = {
   combat: 'text-neon-red',
 };
 
-type TabId = 'profile' | 'ethics' | 'exhibition' | 'recommend';
+type TabId = 'profile' | 'accident' | 'ethics' | 'exhibition' | 'recommend';
 
 const TABS: { id: TabId; label: string; icon: LucideIcon }[] = [
   { id: 'profile', label: '成长档案', icon: ScrollText },
+  { id: 'accident', label: '事故记录', icon: AlertOctagon },
   { id: 'ethics', label: '伦理评估', icon: BadgeCheck },
   { id: 'exhibition', label: '展示大会', icon: Trophy },
   { id: 'recommend', label: '任务推荐', icon: Target },
@@ -166,11 +180,13 @@ export function IdentityPage() {
   const repairRecords = useGameStore((s) => s.repairRecords);
   const ethicsRecords = useGameStore((s) => s.ethicsRecords);
   const exhibitionRecords = useGameStore((s) => s.exhibitionRecords);
+  const accidentRecords = useGameStore((s) => s.accidentRecords);
   const credits = useGameStore((s) => s.credits);
   const computeRobotIdentity = useGameStore((s) => s.computeRobotIdentity);
   const getRecommendedMissions = useGameStore((s) => s.getRecommendedMissions);
   const recordEthicsDecision = useGameStore((s) => s.recordEthicsDecision);
   const participateInExhibition = useGameStore((s) => s.participateInExhibition);
+  const recordAccident = useGameStore((s) => s.recordAccident);
 
   const [selectedRobotId, setSelectedRobotId] = useState<string | null>(
     robots[0]?.id ?? null
@@ -183,6 +199,10 @@ export function IdentityPage() {
   const [exhibitionResult, setExhibitionResult] =
     useState<ExhibitionRecord | null>(null);
   const [exhibitionError, setExhibitionError] = useState<string | null>(null);
+  const [accidentType, setAccidentType] = useState<AccidentType>('overload');
+  const [accidentDesc, setAccidentDesc] = useState('');
+  const [accidentResult, setAccidentResult] =
+    useState<AccidentRecord | null>(null);
 
   const selectedRobot = robots.find((r) => r.id === selectedRobotId) ?? null;
 
@@ -196,12 +216,13 @@ export function IdentityPage() {
     repairRecords,
     ethicsRecords,
     exhibitionRecords,
+    accidentRecords,
   ]);
 
   const recommendations = useMemo(() => {
     if (!selectedRobotId) return [];
     return getRecommendedMissions(selectedRobotId).slice(0, 4);
-  }, [selectedRobotId, getRecommendedMissions, missionRecords, repairRecords, ethicsRecords, exhibitionRecords]);
+  }, [selectedRobotId, getRecommendedMissions, missionRecords, repairRecords, ethicsRecords, exhibitionRecords, accidentRecords]);
 
   const doneScenarioIds = useMemo(() => {
     if (!selectedRobotId) return new Set<string>();
@@ -218,6 +239,13 @@ export function IdentityPage() {
       .filter((r) => r.robotId === selectedRobotId)
       .sort((a, b) => b.completedAt - a.completedAt);
   }, [exhibitionRecords, selectedRobotId]);
+
+  const robotAccidents = useMemo(() => {
+    if (!selectedRobotId) return [];
+    return accidentRecords
+      .filter((r) => r.robotId === selectedRobotId)
+      .sort((a, b) => b.recordedAt - a.recordedAt);
+  }, [accidentRecords, selectedRobotId]);
 
   const handleEthicsChoice = (scenarioId: string, choiceId: string) => {
     if (!selectedRobotId) return;
@@ -238,12 +266,21 @@ export function IdentityPage() {
     }
   };
 
+  const handleRecordAccident = () => {
+    if (!selectedRobotId) return;
+    const result = recordAccident(selectedRobotId, accidentType, accidentDesc);
+    setAccidentResult(result);
+    setAccidentDesc('');
+  };
+
   const handleSelectRobot = (robot: Robot) => {
     setSelectedRobotId(robot.id);
     setEthicsResult(null);
     setExhibitionResult(null);
     setExhibitionError(null);
     setSelectedScenarioId(null);
+    setAccidentResult(null);
+    setAccidentDesc('');
   };
 
   const activeTags = identity?.tags.filter((t) => t.active) ?? [];
@@ -696,6 +733,26 @@ export function IdentityPage() {
                                     )}
                                   </div>
                                   <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-1.5 mb-0.5">
+                                      <span
+                                        className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium flex-shrink-0 ${
+                                          ev.category === 'accident'
+                                            ? 'bg-neon-red/20 text-neon-red'
+                                            : ev.category === 'ethics'
+                                            ? 'bg-neon-green/20 text-neon-green'
+                                            : ev.category === 'exhibition'
+                                            ? 'bg-neon-orange/20 text-neon-orange'
+                                            : ev.category === 'repair'
+                                            ? 'bg-neon-purple/20 text-neon-purple'
+                                            : 'bg-neon-blue/20 text-neon-blue'
+                                        }`}
+                                      >
+                                        {TIMELINE_CATEGORY_LABEL[ev.category] ?? ev.category}
+                                      </span>
+                                      <span className="text-[10px] text-white/40 truncate">
+                                        来源：{ev.source}
+                                      </span>
+                                    </div>
                                     <p className="text-xs text-white truncate">
                                       {ev.reason}
                                     </p>
@@ -739,16 +796,16 @@ export function IdentityPage() {
                               color="text-neon-red"
                             />
                             <StatBox
+                              label="事故记录"
+                              value={identity.stats.accidentCount}
+                              icon={AlertOctagon}
+                              color="text-neon-red"
+                            />
+                            <StatBox
                               label="返修次数"
                               value={identity.stats.repairCount}
                               icon={Wrench}
                               color="text-neon-orange"
-                            />
-                            <StatBox
-                              label="参展次数"
-                              value={identity.stats.exhibitionCount}
-                              icon={Trophy}
-                              color="text-neon-purple"
                             />
                           </div>
                           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
@@ -775,7 +832,13 @@ export function IdentityPage() {
                               }
                             )}
                           </div>
-                          <div className="grid grid-cols-3 gap-3 mt-3">
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
+                            <StatBox
+                              label="参展次数"
+                              value={identity.stats.exhibitionCount}
+                              icon={Trophy}
+                              color="text-neon-purple"
+                            />
                             <StatBox
                               label="伦理抉择"
                               value={identity.stats.ethicalChoices}
@@ -796,6 +859,150 @@ export function IdentityPage() {
                             />
                           </div>
                         </div>
+                      </div>
+                    )}
+
+                    {activeTab === 'accident' && (
+                      <div className="card p-6">
+                        <h3 className="font-display font-bold text-neon-red mb-1 flex items-center gap-2">
+                          <AlertOctagon className="w-5 h-5" />
+                          事故记录
+                        </h3>
+                        <p className="text-xs text-white/50 mb-4">
+                          独立登记机体事故。事故与任务失败分别计账，会直接拉低声誉与客户信任，并催生「事故频发」「危险试验机」等身份标签。
+                        </p>
+
+                        <div className="rounded-xl border border-neon-red/30 bg-neon-red/5 p-4 mb-4">
+                          <p className="text-sm font-display font-bold text-white mb-3">
+                            登记新事故
+                          </p>
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+                            {ACCIDENT_TYPES.map((at) => {
+                              const selected = accidentType === at.id;
+                              return (
+                                <button
+                                  key={at.id}
+                                  onClick={() => setAccidentType(at.id)}
+                                  className={`p-2.5 rounded-lg border text-left transition-all ${
+                                    selected
+                                      ? 'border-neon-red/60 bg-neon-red/15'
+                                      : 'border-border-subtle bg-background hover:border-neon-red/40'
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-1.5 mb-0.5">
+                                    <AlertOctagon
+                                      className={`w-3.5 h-3.5 ${
+                                        selected ? 'text-neon-red' : 'text-white/50'
+                                      }`}
+                                    />
+                                    <span
+                                      className={`text-xs font-display font-bold ${
+                                        selected ? 'text-white' : 'text-white/70'
+                                      }`}
+                                    >
+                                      {at.name}
+                                    </span>
+                                  </div>
+                                  <p className="text-[10px] text-white/40">
+                                    严重度 {at.severity} · 声誉 {at.reputationChange}
+                                  </p>
+                                </button>
+                              );
+                            })}
+                          </div>
+                          <textarea
+                            value={accidentDesc}
+                            onChange={(e) => setAccidentDesc(e.target.value)}
+                            placeholder={
+                              ACCIDENT_TYPES.find((t) => t.id === accidentType)
+                                ?.description ?? '补充事故细节（可选）'
+                            }
+                            rows={2}
+                            className="w-full bg-background rounded-lg p-2.5 text-sm text-white placeholder-white/30 border border-border-subtle focus:border-neon-red/50 focus:outline-none resize-none"
+                          />
+                          <button
+                            onClick={handleRecordAccident}
+                            className="mt-3 w-full py-2.5 rounded-lg font-display font-semibold text-sm bg-gradient-to-r from-neon-red to-neon-orange text-white hover:shadow-lg hover:shadow-neon-red/20"
+                          >
+                            提交事故记录
+                          </button>
+                        </div>
+
+                        <AnimatePresence>
+                          {accidentResult && (
+                            <motion.div
+                              initial={{ opacity: 0, scale: 0.95 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              className="mb-4 p-3 rounded-lg bg-neon-red/10 border border-neon-red/30 flex items-center gap-3"
+                            >
+                              <AlertOctagon className="w-5 h-5 text-neon-red flex-shrink-0" />
+                              <div>
+                                <p className="text-sm text-white">
+                                  事故已登记：{accidentResult.accidentTypeName}
+                                </p>
+                                <p className="text-[11px] text-white/60">
+                                  严重度 {accidentResult.severity} · 声誉{' '}
+                                  <span className="text-neon-red">
+                                    {accidentResult.reputationChange}
+                                  </span>
+                                  ，客户信任随之下降
+                                </p>
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+
+                        {robotAccidents.length === 0 ? (
+                          <div className="text-center py-6 text-white/40">
+                            <AlertOctagon className="w-10 h-10 mx-auto mb-2 opacity-40" />
+                            <p className="text-sm">暂无事故记录</p>
+                            <p className="text-xs mt-1">该机体保持清白之身</p>
+                          </div>
+                        ) : (
+                          <div>
+                            <h4 className="text-sm font-display font-bold text-white/60 mb-2 flex items-center gap-2">
+                              <History className="w-4 h-4" />
+                              事故档案 ({robotAccidents.length})
+                            </h4>
+                            <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1 scrollbar-thin">
+                              {robotAccidents.map((rec) => (
+                                <div
+                                  key={rec.id}
+                                  className="flex items-start gap-3 p-3 bg-background-tertiary rounded-lg"
+                                >
+                                  <span
+                                    className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                                      rec.severity >= 4
+                                        ? 'bg-neon-red/20 text-neon-red'
+                                        : 'bg-neon-orange/20 text-neon-orange'
+                                    }`}
+                                  >
+                                    <AlertOctagon className="w-4 h-4" />
+                                  </span>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <p className="text-xs font-display font-bold text-white">
+                                        {rec.accidentTypeName}
+                                      </p>
+                                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-neon-red/20 text-neon-red">
+                                        严重度 {rec.severity}
+                                      </span>
+                                    </div>
+                                    <p className="text-[11px] text-white/50 mt-0.5 line-clamp-2">
+                                      {rec.description}
+                                    </p>
+                                    <p className="text-[10px] text-white/30 mt-0.5">
+                                      {formatDate(rec.recordedAt)}
+                                    </p>
+                                  </div>
+                                  <span className="text-[11px] font-mono font-bold text-neon-red flex-shrink-0">
+                                    {rec.reputationChange}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -1126,18 +1333,33 @@ export function IdentityPage() {
                           任务推荐
                         </h3>
                         <p className="text-xs text-white/50 mb-4">
-                          基于身份标签与机体适配度综合推荐，当前奖励倍率 ×
-                          {identity.rewardMultiplier.toFixed(2)}。
+                          基于身份标签、客户信任与机体适配度综合排序，当前奖励倍率 ×
+                          {identity.rewardMultiplier.toFixed(2)}（由客户信任 {identity.trust} 驱动）。
                         </p>
                         <div className="space-y-3">
-                          {recommendations.map(({ mission, adaptability, score, reasons }) => {
+                          {recommendations.map(({ mission, adaptability, score, rank, reasons }) => {
                             const Icon = missionTypeIcon[mission.type];
                             return (
                               <div
                                 key={mission.id}
-                                className="p-4 rounded-xl bg-background-tertiary border border-border-subtle"
+                                className={`p-4 rounded-xl border ${
+                                  rank === 1
+                                    ? 'bg-neon-orange/5 border-neon-orange/40'
+                                    : 'bg-background-tertiary border-border-subtle'
+                                }`}
                               >
                                 <div className="flex items-start gap-3">
+                                  <div
+                                    className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 font-mono font-bold ${
+                                      rank === 1
+                                        ? 'bg-neon-orange/20 text-neon-orange'
+                                        : rank <= 3
+                                        ? 'bg-neon-blue/20 text-neon-blue'
+                                        : 'bg-background text-white/50'
+                                    }`}
+                                  >
+                                    #{rank}
+                                  </div>
                                   <div
                                     className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${missionTypeColor[mission.type].replace(
                                       'text-',

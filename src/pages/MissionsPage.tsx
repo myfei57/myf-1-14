@@ -75,6 +75,7 @@ export function MissionsPage() {
   const repairRecords = useGameStore((s) => s.repairRecords);
   const ethicsRecords = useGameStore((s) => s.ethicsRecords);
   const exhibitionRecords = useGameStore((s) => s.exhibitionRecords);
+  const accidentRecords = useGameStore((s) => s.accidentRecords);
   const calculateAdaptability = useGameStore((s) => s.calculateAdaptability);
   const executeMission = useGameStore((s) => s.executeMission);
   const computeRobotIdentity = useGameStore((s) => s.computeRobotIdentity);
@@ -99,6 +100,7 @@ export function MissionsPage() {
     repairRecords,
     ethicsRecords,
     exhibitionRecords,
+    accidentRecords,
   ]);
 
   const multiplier = selectedIdentity?.rewardMultiplier ?? 1;

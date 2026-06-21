@@ -10,6 +10,7 @@ import type {
   RepairRecord,
   EthicsRecord,
   ExhibitionRecord,
+  AccidentRecord,
   IdentityTag,
   IdentityTagId,
   IdentityStats,
@@ -27,6 +28,8 @@ import {
   IDENTITY_TAGS,
   REPUTATION_TIERS,
   IDENTITY_BASE_REPUTATION,
+  ACCIDENT_TYPES,
+  ACCIDENT_SEVERITY_THRESHOLD,
 } from '../data/defaultConfig';
 
 const PART_TYPES: PartType[] = ['head', 'body', 'arm', 'leg', 'core', 'tool'];
@@ -295,13 +298,15 @@ function buildIdentityStats(
   robot: Robot,
   missionRecords: MissionRecord[],
   ethicsRecords: EthicsRecord[],
-  exhibitionRecords: ExhibitionRecord[]
+  exhibitionRecords: ExhibitionRecord[],
+  accidentRecords: AccidentRecord[]
 ): IdentityStats {
   const robotMissions = missionRecords.filter((r) => r.robotId === robot.id);
   const robotEthics = ethicsRecords.filter((r) => r.robotId === robot.id);
   const robotExhibitions = exhibitionRecords.filter(
     (r) => r.robotId === robot.id
   );
+  const robotAccidents = accidentRecords.filter((r) => r.robotId === robot.id);
 
   const missionByType: Record<MissionType, { success: number; fail: number }> =
     {
@@ -339,6 +344,14 @@ function buildIdentityStats(
   const exhibitionCount = robotExhibitions.length;
   const firstPlaceCount = robotExhibitions.filter((r) => r.rank === 1).length;
 
+  const accidentCount = robotAccidents.length;
+  const severeAccidents = robotAccidents.filter(
+    (r) => r.severity >= ACCIDENT_SEVERITY_THRESHOLD
+  ).length;
+  const overloadAccidents = robotAccidents.filter(
+    (r) => r.accidentType === 'overload'
+  ).length;
+
   const partsInstalled = Object.values(robot.parts).filter(Boolean).length;
 
   return {
@@ -347,7 +360,9 @@ function buildIdentityStats(
     missionFail,
     missionByType,
     highDifficultyFails,
-    overloadedFails: 0,
+    accidentCount,
+    severeAccidents,
+    overloadAccidents,
     repairCount: robot.repairCount,
     ethicsScore,
     ethicalChoices,
@@ -434,21 +449,21 @@ function evaluateTags(stats: IdentityStats, robot: Robot): TagEvaluation[] {
 
   add(
     'accident-prone',
-    stats.missionFail >= 3,
-    `任务失败 ${stats.missionFail} 次`,
-    stats.missionFail < 3
-      ? { current: stats.missionFail, required: 3, label: '任务失败次数' }
+    stats.accidentCount >= 3,
+    `独立事故记录 ${stats.accidentCount} 次`,
+    stats.accidentCount < 3
+      ? { current: stats.accidentCount, required: 3, label: '事故记录次数' }
       : undefined
   );
   add(
     'dangerous-test',
-    stats.highDifficultyFails >= 2,
-    `高难度任务失败 ${stats.highDifficultyFails} 次`,
-    stats.highDifficultyFails < 2
+    stats.severeAccidents >= 2,
+    `严重事故 ${stats.severeAccidents} 次`,
+    stats.severeAccidents < 2
       ? {
-          current: stats.highDifficultyFails,
+          current: stats.severeAccidents,
           required: 2,
-          label: '高难度任务失败',
+          label: '严重事故次数',
         }
       : undefined
   );
@@ -538,7 +553,8 @@ export function buildReputationTimeline(
   missionRecords: MissionRecord[],
   repairRecords: RepairRecord[],
   ethicsRecords: EthicsRecord[],
-  exhibitionRecords: ExhibitionRecord[]
+  exhibitionRecords: ExhibitionRecord[],
+  accidentRecords: AccidentRecord[]
 ): TimelineEvent[] {
   const events: Omit<TimelineEvent, 'reputationAfter'>[] = [];
 
@@ -549,6 +565,7 @@ export function buildReputationTimeline(
         timestamp: rec.completedAt,
         delta: 3,
         reason: `任务成功 · ${rec.missionName}`,
+        source: '任务派遣',
         category: 'mission',
         outcome: 'success',
       });
@@ -558,6 +575,7 @@ export function buildReputationTimeline(
         timestamp: rec.completedAt,
         delta: -4,
         reason: `任务失败 · ${rec.missionName}`,
+        source: '任务派遣',
         category: 'mission',
         outcome: 'fail',
       });
@@ -570,6 +588,7 @@ export function buildReputationTimeline(
       timestamp: rec.repairedAt,
       delta: -1,
       reason: `维修 · 消耗 ${rec.materialCost} 材料`,
+      source: '维修车间',
       category: 'repair',
       outcome: 'neutral',
     });
@@ -581,6 +600,7 @@ export function buildReputationTimeline(
       timestamp: rec.completedAt,
       delta: rec.reputationChange,
       reason: `伦理抉择 · ${rec.scenarioTitle}：${rec.choiceLabel}`,
+      source: '伦理评估',
       category: 'ethics',
       outcome:
         rec.choiceType === 'ethical'
@@ -597,8 +617,21 @@ export function buildReputationTimeline(
       timestamp: rec.completedAt,
       delta: rec.reputationChange,
       reason: `展示大会 · ${rec.exhibitionName}（${rec.rankLabel}）`,
+      source: '展示大会',
       category: 'exhibition',
       outcome: rec.rank <= 3 ? 'success' : 'neutral',
+    });
+  }
+
+  for (const rec of accidentRecords.filter((r) => r.robotId === robotId)) {
+    events.push({
+      id: rec.id,
+      timestamp: rec.recordedAt,
+      delta: rec.reputationChange,
+      reason: `事故记录 · ${rec.accidentTypeName}`,
+      source: '事故档案',
+      category: 'accident',
+      outcome: 'fail',
     });
   }
 
@@ -618,7 +651,8 @@ export function computeRobotIdentity(
   missionRecords: MissionRecord[],
   repairRecords: RepairRecord[],
   ethicsRecords: EthicsRecord[],
-  exhibitionRecords: ExhibitionRecord[]
+  exhibitionRecords: ExhibitionRecord[],
+  accidentRecords: AccidentRecord[]
 ): RobotIdentityResult {
   if (!robot) {
     const emptyStats: IdentityStats = {
@@ -632,7 +666,9 @@ export function computeRobotIdentity(
         combat: { success: 0, fail: 0 },
       },
       highDifficultyFails: 0,
-      overloadedFails: 0,
+      accidentCount: 0,
+      severeAccidents: 0,
+      overloadAccidents: 0,
       repairCount: 0,
       ethicsScore: 0,
       ethicalChoices: 0,
@@ -659,14 +695,16 @@ export function computeRobotIdentity(
     robot,
     missionRecords,
     ethicsRecords,
-    exhibitionRecords
+    exhibitionRecords,
+    accidentRecords
   );
   const timeline = buildReputationTimeline(
     robot.id,
     missionRecords,
     repairRecords,
     ethicsRecords,
-    exhibitionRecords
+    exhibitionRecords,
+    accidentRecords
   );
 
   const reputation =
@@ -689,7 +727,7 @@ export function computeRobotIdentity(
     100
   );
   const rewardMultiplier =
-    Math.round((0.8 + (reputation / 100) * 0.7) * 100) / 100;
+    Math.round((0.8 + (trust / 100) * 0.7) * 100) / 100;
 
   return {
     reputation,
@@ -713,7 +751,11 @@ export function getMissionRecommendations(
     identity.tags.filter((t) => t.active).map((t) => t.tag.id)
   );
 
-  const recommendations: MissionRecommendation[] = MISSIONS.map((mission) => {
+  type ScoredRecommendation = MissionRecommendation & {
+    expectedCredits: number;
+  };
+
+  const recommendations: ScoredRecommendation[] = MISSIONS.map((mission) => {
     const adaptability = calculateAdaptability(robot, mission, config);
     let affinity = 1;
     const reasons: string[] = [];
@@ -760,22 +802,53 @@ export function getMissionRecommendations(
       reasons.push('违规者，客户信任降低');
     }
 
+    if (identity.trust >= 81) {
+      affinity *= 1.1;
+      reasons.push('传奇信赖，客户优先指派');
+    } else if (identity.trust >= 61) {
+      affinity *= 1.05;
+      reasons.push('客户信任良好');
+    } else if (identity.trust <= 20) {
+      affinity *= 0.85;
+      reasons.push('客户信任低迷，难以接单');
+    } else if (identity.trust <= 40 && mission.difficulty >= 4) {
+      affinity *= 0.9;
+      reasons.push('信任不足，高难任务受限');
+    }
+
     if (reasons.length === 0) {
       reasons.push('综合适配评估');
     }
 
     const score = Math.round(adaptability * affinity);
+    const expectedCredits = Math.round(
+      mission.rewards.credits * identity.rewardMultiplier
+    );
 
     return {
       mission,
       adaptability,
       score,
+      rank: 0,
       rewardMultiplier: identity.rewardMultiplier,
       reasons,
+      expectedCredits,
     };
   });
 
-  return recommendations.sort((a, b) => b.score - a.score);
+  const sorted = recommendations.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    return b.expectedCredits - a.expectedCredits;
+  });
+
+  return sorted.map((rec, idx) => ({
+    mission: rec.mission,
+    adaptability: rec.adaptability,
+    score: rec.score,
+    rank: idx + 1,
+    rewardMultiplier: rec.rewardMultiplier,
+    reasons: rec.reasons,
+  }));
 }
 
 export function computeExhibitionScore(robot: Robot, exhibition: Exhibition): number {

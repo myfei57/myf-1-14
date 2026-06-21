@@ -20,6 +20,7 @@ export function RobotCard({ robot, onClick, selected = false, showDetails = fals
   const repairRecords = useGameStore((s) => s.repairRecords);
   const ethicsRecords = useGameStore((s) => s.ethicsRecords);
   const exhibitionRecords = useGameStore((s) => s.exhibitionRecords);
+  const accidentRecords = useGameStore((s) => s.accidentRecords);
 
   const identity = useMemo(
     () => computeRobotIdentity(robot.id),
@@ -30,6 +31,7 @@ export function RobotCard({ robot, onClick, selected = false, showDetails = fals
       repairRecords,
       ethicsRecords,
       exhibitionRecords,
+      accidentRecords,
     ]
   );
 

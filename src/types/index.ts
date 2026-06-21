@@ -198,6 +198,29 @@ export interface ExhibitionRecord {
   completedAt: number;
 }
 
+export type AccidentType = 'overload' | 'collision' | 'operation' | 'system';
+
+export interface AccidentTypeConfig {
+  id: AccidentType;
+  name: string;
+  description: string;
+  reputationChange: number;
+  severity: number;
+  icon: string;
+}
+
+export interface AccidentRecord {
+  id: string;
+  robotId: string;
+  robotName: string;
+  accidentType: AccidentType;
+  accidentTypeName: string;
+  severity: number;
+  description: string;
+  reputationChange: number;
+  recordedAt: number;
+}
+
 export interface ReputationTier {
   id: string;
   name: string;
@@ -213,7 +236,9 @@ export interface IdentityStats {
   missionFail: number;
   missionByType: Record<MissionType, { success: number; fail: number }>;
   highDifficultyFails: number;
-  overloadedFails: number;
+  accidentCount: number;
+  severeAccidents: number;
+  overloadAccidents: number;
   repairCount: number;
   ethicsScore: number;
   ethicalChoices: number;
@@ -237,7 +262,8 @@ export interface TimelineEvent {
   delta: number;
   reputationAfter: number;
   reason: string;
-  category: 'mission' | 'repair' | 'ethics' | 'exhibition';
+  source: string;
+  category: 'mission' | 'repair' | 'ethics' | 'exhibition' | 'accident';
   outcome: 'success' | 'fail' | 'neutral';
 }
 
@@ -257,6 +283,7 @@ export interface MissionRecommendation {
   mission: Mission;
   adaptability: number;
   score: number;
+  rank: number;
   rewardMultiplier: number;
   reasons: string[];
 }
@@ -320,6 +347,7 @@ export interface GameState {
   assemblyPlans: AssemblyPlan[];
   ethicsRecords: EthicsRecord[];
   exhibitionRecords: ExhibitionRecord[];
+  accidentRecords: AccidentRecord[];
   config: GameConfig;
   selectedParts: Record<PartType, Part | null>;
 }
@@ -360,6 +388,7 @@ export interface GameActions {
   openBlindBox: (type: Rarity, free?: boolean) => Part[];
   recordEthicsDecision: (robotId: string, scenarioId: string, choiceId: string) => EthicsRecord;
   participateInExhibition: (robotId: string, exhibitionId: string) => ExhibitionRecord;
+  recordAccident: (robotId: string, accidentType: AccidentType, description: string) => AccidentRecord;
   computeRobotIdentity: (robotId: string) => RobotIdentityResult;
   getRecommendedMissions: (robotId: string) => MissionRecommendation[];
   loadFromStorage: () => void;

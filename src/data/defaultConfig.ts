@@ -6,6 +6,7 @@ import type {
   ReputationTier,
   EthicsScenario,
   Exhibition,
+  AccidentTypeConfig,
 } from '../types';
 
 export const DEFAULT_CONFIG: GameConfig = {
@@ -644,3 +645,40 @@ export const EXHIBITIONS: Exhibition[] = [
     ],
   },
 ];
+
+export const ACCIDENT_TYPES: AccidentTypeConfig[] = [
+  {
+    id: 'overload',
+    name: '过载故障',
+    description: '能耗超限导致核心过载，机体在运行中骤停或冒烟。',
+    reputationChange: -6,
+    severity: 4,
+    icon: 'Zap',
+  },
+  {
+    id: 'collision',
+    name: '碰撞事故',
+    description: '作业中与其他物体或机体发生碰撞，造成外部损伤。',
+    reputationChange: -4,
+    severity: 3,
+    icon: 'AlertTriangle',
+  },
+  {
+    id: 'operation',
+    name: '操作失误',
+    description: '指令执行偏差，导致任务对象损毁或流程中断。',
+    reputationChange: -3,
+    severity: 2,
+    icon: 'AlertTriangle',
+  },
+  {
+    id: 'system',
+    name: '系统失效',
+    description: '软件或传感器突发故障，机体短暂失控。',
+    reputationChange: -5,
+    severity: 4,
+    icon: 'AlertTriangle',
+  },
+];
+
+export const ACCIDENT_SEVERITY_THRESHOLD = 4;
