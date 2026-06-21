@@ -1,5 +1,6 @@
+import { useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Bot, Heart, Scale, Gauge, Layers, AlertTriangle, Sparkles } from 'lucide-react';
+import { Bot, Heart, Scale, Gauge, Layers, AlertTriangle, Sparkles, BadgeCheck } from 'lucide-react';
 import type { Robot } from '../types';
 import { useGameStore } from '../store/useGameStore';
 import { StatBar } from './StatBar';
@@ -14,6 +15,25 @@ interface RobotCardProps {
 
 export function RobotCard({ robot, onClick, selected = false, showDetails = false }: RobotCardProps) {
   const config = useGameStore((s) => s.config);
+  const computeRobotIdentity = useGameStore((s) => s.computeRobotIdentity);
+  const missionRecords = useGameStore((s) => s.missionRecords);
+  const repairRecords = useGameStore((s) => s.repairRecords);
+  const ethicsRecords = useGameStore((s) => s.ethicsRecords);
+  const exhibitionRecords = useGameStore((s) => s.exhibitionRecords);
+
+  const identity = useMemo(
+    () => computeRobotIdentity(robot.id),
+    [
+      robot.id,
+      computeRobotIdentity,
+      missionRecords,
+      repairRecords,
+      ethicsRecords,
+      exhibitionRecords,
+    ]
+  );
+
+  const topTag = identity.tags.find((t) => t.active && t.tag.tier === 'positive');
 
   const durabilityPercent = (robot.durability / robot.maxDurability) * 100;
   const durabilityColor =
@@ -53,6 +73,24 @@ export function RobotCard({ robot, onClick, selected = false, showDetails = fals
           <p className="text-xs text-white/50 mb-2">
             {installedPartsCount}/6 零件 | 返修 {robot.repairCount} 次
           </p>
+
+          <div className="flex items-center gap-1.5 mb-2 flex-wrap">
+            <span
+              className="text-[10px] px-1.5 py-0.5 rounded-full font-medium flex items-center gap-1"
+              style={{
+                color: identity.tier.color,
+                backgroundColor: `${identity.tier.color}22`,
+              }}
+            >
+              <BadgeCheck className="w-3 h-3" />
+              {identity.tier.name} · {identity.reputation}
+            </span>
+            {topTag && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-neon-green/20 text-neon-green">
+                {topTag.tag.name}
+              </span>
+            )}
+          </div>
 
           {robot.activeSetBonuses.length > 0 && (
             <div className="flex flex-wrap gap-1 mb-2">

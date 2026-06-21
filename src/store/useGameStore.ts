@@ -8,6 +8,8 @@ import type {
   Robot,
   MissionRecord,
   RepairRecord,
+  EthicsRecord,
+  ExhibitionRecord,
   AssemblyPlan,
   GameConfig,
 } from '../types';
@@ -17,12 +19,17 @@ import {
   INITIAL_CREDITS,
   INITIAL_MATERIALS,
   BLIND_BOX_PRICES,
+  ETHICS_SCENARIOS,
+  EXHIBITIONS,
 } from '../data/defaultConfig';
 import {
   generateId,
   generateRandomPart,
   calculateRobotStats as calcStats,
   calculateAdaptability as calcAdapt,
+  computeRobotIdentity as computeIdentity,
+  getMissionRecommendations,
+  computeExhibitionScore,
   clamp,
 } from '../utils/helpers';
 
@@ -45,6 +52,8 @@ export const useGameStore = create<Store>()(
       missionRecords: [],
       repairRecords: [],
       assemblyPlans: [],
+      ethicsRecords: [],
+      exhibitionRecords: [],
       config: DEFAULT_CONFIG,
       selectedParts: { ...EMPTY_SELECTED_PARTS },
 
@@ -218,11 +227,20 @@ export const useGameStore = create<Store>()(
         const newDurability = clamp(robot.durability - durabilityLoss, 0, robot.maxDurability);
         state.updateRobot(robotId, { durability: newDurability });
 
+        const identity = computeIdentity(
+          robot,
+          state.missionRecords,
+          state.repairRecords,
+          state.ethicsRecords,
+          state.exhibitionRecords
+        );
+        const multiplier = identity.rewardMultiplier;
+
         let rewards = { credits: 0, materials: 0 };
         if (success) {
           rewards = {
-            credits: mission.rewards.credits,
-            materials: mission.rewards.materials,
+            credits: Math.round(mission.rewards.credits * multiplier),
+            materials: Math.round(mission.rewards.materials * multiplier),
           };
           state.addCredits(rewards.credits);
           state.addMaterials(rewards.materials);
@@ -284,6 +302,95 @@ export const useGameStore = create<Store>()(
         return parts;
       },
 
+      recordEthicsDecision: (robotId, scenarioId, choiceId) => {
+        const state = get();
+        const robot = state.robots.find((r) => r.id === robotId);
+        const scenario = ETHICS_SCENARIOS.find((s) => s.id === scenarioId);
+        if (!robot || !scenario) {
+          throw new Error('Robot or ethics scenario not found');
+        }
+        const choice = scenario.choices.find((c) => c.id === choiceId);
+        if (!choice) {
+          throw new Error('Ethics choice not found');
+        }
+
+        const record: EthicsRecord = {
+          id: generateId(),
+          robotId: robot.id,
+          robotName: robot.name,
+          scenarioId: scenario.id,
+          scenarioTitle: scenario.title,
+          choiceId: choice.id,
+          choiceLabel: choice.label,
+          choiceType: choice.type,
+          reputationChange: choice.reputationChange,
+          completedAt: Date.now(),
+        };
+        set((s) => ({ ethicsRecords: [...s.ethicsRecords, record] }));
+        return record;
+      },
+
+      participateInExhibition: (robotId, exhibitionId) => {
+        const state = get();
+        const robot = state.robots.find((r) => r.id === robotId);
+        const exhibition = EXHIBITIONS.find((e) => e.id === exhibitionId);
+        if (!robot || !exhibition) {
+          throw new Error('Robot or exhibition not found');
+        }
+
+        if (!state.spendCredits(exhibition.entryFee)) {
+          throw new Error('Insufficient credits for entry fee');
+        }
+
+        const displayScore = computeExhibitionScore(robot, exhibition);
+        const tier = exhibition.tiers.find((t) => displayScore >= t.minScore) ??
+          exhibition.tiers[exhibition.tiers.length - 1];
+
+        state.addCredits(tier.reward);
+
+        const record: ExhibitionRecord = {
+          id: generateId(),
+          robotId: robot.id,
+          robotName: robot.name,
+          exhibitionId: exhibition.id,
+          exhibitionName: exhibition.name,
+          displayScore,
+          rank: tier.rank,
+          rankLabel: tier.label,
+          reward: tier.reward,
+          reputationChange: tier.reputationChange,
+          completedAt: Date.now(),
+        };
+        set((s) => ({ exhibitionRecords: [...s.exhibitionRecords, record] }));
+        return record;
+      },
+
+      computeRobotIdentity: (robotId) => {
+        const state = get();
+        const robot = state.robots.find((r) => r.id === robotId);
+        return computeIdentity(
+          robot,
+          state.missionRecords,
+          state.repairRecords,
+          state.ethicsRecords,
+          state.exhibitionRecords
+        );
+      },
+
+      getRecommendedMissions: (robotId) => {
+        const state = get();
+        const robot = state.robots.find((r) => r.id === robotId);
+        if (!robot) return [];
+        const identity = computeIdentity(
+          robot,
+          state.missionRecords,
+          state.repairRecords,
+          state.ethicsRecords,
+          state.exhibitionRecords
+        );
+        return getMissionRecommendations(robot, state.config, identity);
+      },
+
       loadFromStorage: () => {},
 
       resetGame: () =>
@@ -295,6 +402,8 @@ export const useGameStore = create<Store>()(
           missionRecords: [],
           repairRecords: [],
           assemblyPlans: [],
+          ethicsRecords: [],
+          exhibitionRecords: [],
           selectedParts: { ...EMPTY_SELECTED_PARTS },
         }),
     }),
@@ -308,6 +417,8 @@ export const useGameStore = create<Store>()(
         missionRecords: state.missionRecords,
         repairRecords: state.repairRecords,
         assemblyPlans: state.assemblyPlans,
+        ethicsRecords: state.ethicsRecords,
+        exhibitionRecords: state.exhibitionRecords,
         config: state.config,
       }),
     }

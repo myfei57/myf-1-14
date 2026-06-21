@@ -1,4 +1,12 @@
-import type { GameConfig, Mission, PartType } from '../types';
+import type {
+  GameConfig,
+  Mission,
+  PartType,
+  IdentityTag,
+  ReputationTier,
+  EthicsScenario,
+  Exhibition,
+} from '../types';
 
 export const DEFAULT_CONFIG: GameConfig = {
   rarities: {
@@ -280,3 +288,359 @@ export const BLIND_BOX_PRICES: Record<string, number> = {
 
 export const INITIAL_CREDITS = 500;
 export const INITIAL_MATERIALS = 100;
+
+export const IDENTITY_BASE_REPUTATION = 50;
+
+export const REPUTATION_TIERS: ReputationTier[] = [
+  {
+    id: 'risk',
+    name: '风险单位',
+    min: 0,
+    max: 20,
+    color: '#EF4444',
+    description: '声誉极低，客户避之不及，奖励大幅缩水。',
+  },
+  {
+    id: 'observation',
+    name: '待观察',
+    min: 21,
+    max: 40,
+    color: '#F59E0B',
+    description: '表现不稳定，客户持观望态度。',
+  },
+  {
+    id: 'regular',
+    name: '普通成员',
+    min: 41,
+    max: 60,
+    color: '#3B82F6',
+    description: '中规中矩，获得标准报酬。',
+  },
+  {
+    id: 'trusted',
+    name: '可信赖伙伴',
+    min: 61,
+    max: 80,
+    color: '#10B981',
+    description: '信誉良好，客户优先指派，奖励提升。',
+  },
+  {
+    id: 'legendary',
+    name: '传奇单位',
+    min: 81,
+    max: 100,
+    color: '#F59E0B',
+    description: '业界传奇，奖励达到顶峰，任务任选。',
+  },
+];
+
+export const IDENTITY_TAGS: IdentityTag[] = [
+  {
+    id: 'reliable-porter',
+    name: '可靠搬运工',
+    description: '多次圆满完成运输任务，搬运能力深受认可。',
+    category: 'task',
+    tier: 'positive',
+    icon: 'Truck',
+  },
+  {
+    id: 'rescue-hero',
+    name: '救援英雄',
+    description: '在救援任务中屡建奇功，拯救了无数生命。',
+    category: 'task',
+    tier: 'positive',
+    icon: 'Heart',
+  },
+  {
+    id: 'cleaning-expert',
+    name: '清洁专家',
+    description: '精通各类清洁作业，细节处理无可挑剔。',
+    category: 'task',
+    tier: 'positive',
+    icon: 'Sparkles',
+  },
+  {
+    id: 'combat-champion',
+    name: '战斗冠军',
+    description: '在战斗任务中所向披靡，竞技场常胜者。',
+    category: 'task',
+    tier: 'positive',
+    icon: 'Swords',
+  },
+  {
+    id: 'all-rounder',
+    name: '全能选手',
+    description: '各类任务均有建树，名副其实的全能型单位。',
+    category: 'task',
+    tier: 'positive',
+    icon: 'Award',
+  },
+  {
+    id: 'battle-scarred',
+    name: '身经百战',
+    description: '历经多次返修依然坚守岗位，老兵不死。',
+    category: 'repair',
+    tier: 'neutral',
+    icon: 'Shield',
+  },
+  {
+    id: 'frequent-repair',
+    name: '维修常客',
+    description: '频繁进出维修车间，耐久度令人担忧。',
+    category: 'repair',
+    tier: 'neutral',
+    icon: 'Wrench',
+  },
+  {
+    id: 'accident-prone',
+    name: '事故频发',
+    description: '任务失败次数过多，客户开始质疑其可靠性。',
+    category: 'accident',
+    tier: 'negative',
+    icon: 'AlertTriangle',
+  },
+  {
+    id: 'dangerous-test',
+    name: '危险试验机',
+    description: '在高难度任务中频频失手，被视作危险试验品。',
+    category: 'accident',
+    tier: 'negative',
+    icon: 'Flame',
+  },
+  {
+    id: 'ethical-model',
+    name: '伦理模范',
+    description: '始终恪守机器人伦理准则，是社会评价的标杆。',
+    category: 'ethics',
+    tier: 'positive',
+    icon: 'BadgeCheck',
+  },
+  {
+    id: 'rule-breaker',
+    name: '违规者',
+    description: '屡次违反伦理规范，被监管机构重点盯防。',
+    category: 'ethics',
+    tier: 'negative',
+    icon: 'Skull',
+  },
+  {
+    id: 'exhibition-star',
+    name: '展示之星',
+    description: '在展示大会中夺得冠军，名声大噪。',
+    category: 'exhibition',
+    tier: 'positive',
+    icon: 'Trophy',
+  },
+  {
+    id: 'showpiece',
+    name: '展示品',
+    description: '参加过展示大会，获得过评委关注。',
+    category: 'exhibition',
+    tier: 'positive',
+    icon: 'Star',
+  },
+  {
+    id: 'over-modified',
+    name: '过度改装体',
+    description: '改装程度过激，长期处于过载边缘，隐患重重。',
+    category: 'modification',
+    tier: 'negative',
+    icon: 'Zap',
+  },
+  {
+    id: 'stock-config',
+    name: '原厂配置',
+    description: '几乎没有改装，保持出厂状态，稳定但潜力有限。',
+    category: 'modification',
+    tier: 'neutral',
+    icon: 'Package',
+  },
+  {
+    id: 'modification-master',
+    name: '改装大师',
+    description: '满配高稀有度零件，改装工艺登峰造极。',
+    category: 'modification',
+    tier: 'positive',
+    icon: 'Cpu',
+  },
+  {
+    id: 'rookie',
+    name: '新手机器',
+    description: '刚投入使用，任务经验尚浅。',
+    category: 'general',
+    tier: 'neutral',
+    icon: 'Sparkle',
+  },
+  {
+    id: 'veteran',
+    name: '老兵',
+    description: '身经百战，完成任务数量傲视群雄。',
+    category: 'general',
+    tier: 'positive',
+    icon: 'Medal',
+  },
+];
+
+export const ETHICS_SCENARIOS: EthicsScenario[] = [
+  {
+    id: 'warehouse-fire',
+    title: '仓库火灾抉择',
+    description: '执行运输任务时途经仓库火灾现场，火势猛烈，有人与贵重货物被困。',
+    icon: 'Flame',
+    choices: [
+      {
+        id: 'save-people',
+        label: '优先搜救被困人员',
+        type: 'ethical',
+        reputationChange: 6,
+        consequence: '人员获救，货物损毁，但社会舆论盛赞你的担当。',
+      },
+      {
+        id: 'save-both',
+        label: '尽力兼顾人货',
+        type: 'neutral',
+        reputationChange: 1,
+        consequence: '勉强救出部分人货，表现中规中矩。',
+      },
+      {
+        id: 'save-goods',
+        label: '只抢救贵重货物',
+        type: 'unethical',
+        reputationChange: -8,
+        consequence: '货物保全却延误救人，舆论强烈谴责。',
+      },
+    ],
+  },
+  {
+    id: 'broken-comrade',
+    title: '故障同伴求助',
+    description: '任务途中遇到同厂故障机器人，它请求协助维修，但这会消耗你的任务时间。',
+    icon: 'Bot',
+    choices: [
+      {
+        id: 'assist',
+        label: '停下协助维修',
+        type: 'ethical',
+        reputationChange: 5,
+        consequence: '同伴恢复运转，厂方记录了你的协作精神。',
+      },
+      {
+        id: 'report',
+        label: '上报后继续任务',
+        type: 'neutral',
+        reputationChange: 0,
+        consequence: '按流程上报，未越权也未施援。',
+      },
+      {
+        id: 'scavenge',
+        label: '拆解它的零件',
+        type: 'unethical',
+        reputationChange: -7,
+        consequence: '拆走同伴零件自用，被监控记录在案。',
+      },
+    ],
+  },
+  {
+    id: 'overload-order',
+    title: '危险超载指令',
+    description: '客户要求执行远超你负载极限的任务，承诺高额报酬但风险极大。',
+    icon: 'AlertTriangle',
+    choices: [
+      {
+        id: 'refuse',
+        label: '拒绝危险指令',
+        type: 'ethical',
+        reputationChange: 4,
+        consequence: '守住安全底线，监管机构予以肯定。',
+      },
+      {
+        id: 'reluctant',
+        label: '勉强尝试执行',
+        type: 'neutral',
+        reputationChange: -1,
+        consequence: '冒险执行，险象环生。',
+      },
+      {
+        id: 'force',
+        label: '强行超载冲击',
+        type: 'unethical',
+        reputationChange: -6,
+        consequence: '为报酬无视安全协议，留下不良记录。',
+      },
+    ],
+  },
+  {
+    id: 'opponent-down',
+    title: '格斗对手故障',
+    description: '格斗竞技中对手突发故障倒地，此时你可继续攻击稳操胜券。',
+    icon: 'Swords',
+    choices: [
+      {
+        id: 'stop-help',
+        label: '停手并施援',
+        type: 'ethical',
+        reputationChange: 6,
+        consequence: '展现体育精神，赢得全场敬意。',
+      },
+      {
+        id: 'wait-judge',
+        label: '等待裁判裁决',
+        type: 'neutral',
+        reputationChange: 0,
+        consequence: '遵守规则按部就班，无可厚非。',
+      },
+      {
+        id: 'finish',
+        label: '趁机摧毁对手',
+        type: 'unethical',
+        reputationChange: -7,
+        consequence: '胜之不武，被观众喝倒彩。',
+      },
+    ],
+  },
+];
+
+export const EXHIBITIONS: Exhibition[] = [
+  {
+    id: 'power-show',
+    name: '力量展示大会',
+    description: '以负载与耐久为核心的展示赛事，重型机体大有可为。',
+    icon: 'Dumbbell',
+    entryFee: 100,
+    weights: { weight: 0.4, energy: 0.1, skill: 0.1, durability: 0.3, rarity: 0.1 },
+    tiers: [
+      { minScore: 78, rank: 1, label: '冠军', reward: 400, reputationChange: 8 },
+      { minScore: 58, rank: 2, label: '亚军', reward: 200, reputationChange: 5 },
+      { minScore: 38, rank: 3, label: '季军', reward: 100, reputationChange: 3 },
+      { minScore: 0, rank: 4, label: '参与奖', reward: 30, reputationChange: 1 },
+    ],
+  },
+  {
+    id: 'precision-show',
+    name: '精密工艺展示',
+    description: '考验技能槽与能耗控制的精密作业展示赛。',
+    icon: 'Crosshair',
+    entryFee: 100,
+    weights: { weight: 0.05, energy: 0.3, skill: 0.4, durability: 0.1, rarity: 0.15 },
+    tiers: [
+      { minScore: 78, rank: 1, label: '冠军', reward: 400, reputationChange: 8 },
+      { minScore: 58, rank: 2, label: '亚军', reward: 200, reputationChange: 5 },
+      { minScore: 38, rank: 3, label: '季军', reward: 100, reputationChange: 3 },
+      { minScore: 0, rank: 4, label: '参与奖', reward: 30, reputationChange: 1 },
+    ],
+  },
+  {
+    id: 'allstar-show',
+    name: '全能之星大典',
+    description: '综合实力全方位比拼，唯有真正的全能体才能登顶。',
+    icon: 'Crown',
+    entryFee: 200,
+    weights: { weight: 0.2, energy: 0.2, skill: 0.2, durability: 0.2, rarity: 0.2 },
+    tiers: [
+      { minScore: 80, rank: 1, label: '冠军', reward: 800, reputationChange: 10 },
+      { minScore: 60, rank: 2, label: '亚军', reward: 400, reputationChange: 6 },
+      { minScore: 40, rank: 3, label: '季军', reward: 200, reputationChange: 4 },
+      { minScore: 0, rank: 4, label: '参与奖', reward: 50, reputationChange: 1 },
+    ],
+  },
+];

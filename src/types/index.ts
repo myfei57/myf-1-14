@@ -87,6 +87,180 @@ export interface AssemblyPlan {
   savedAt: number;
 }
 
+export type IdentityCategory =
+  | 'task'
+  | 'repair'
+  | 'accident'
+  | 'ethics'
+  | 'exhibition'
+  | 'modification'
+  | 'general';
+
+export type IdentityTagTier = 'positive' | 'neutral' | 'negative';
+
+export type IdentityTagId =
+  | 'reliable-porter'
+  | 'rescue-hero'
+  | 'cleaning-expert'
+  | 'combat-champion'
+  | 'all-rounder'
+  | 'battle-scarred'
+  | 'frequent-repair'
+  | 'accident-prone'
+  | 'dangerous-test'
+  | 'ethical-model'
+  | 'rule-breaker'
+  | 'exhibition-star'
+  | 'showpiece'
+  | 'over-modified'
+  | 'stock-config'
+  | 'modification-master'
+  | 'rookie'
+  | 'veteran';
+
+export interface IdentityTag {
+  id: IdentityTagId;
+  name: string;
+  description: string;
+  category: IdentityCategory;
+  tier: IdentityTagTier;
+  icon: string;
+}
+
+export type EthicsChoiceType = 'ethical' | 'neutral' | 'unethical';
+
+export interface EthicsChoice {
+  id: string;
+  label: string;
+  type: EthicsChoiceType;
+  reputationChange: number;
+  consequence: string;
+}
+
+export interface EthicsScenario {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  choices: EthicsChoice[];
+}
+
+export interface ExhibitionTier {
+  minScore: number;
+  rank: number;
+  label: string;
+  reward: number;
+  reputationChange: number;
+}
+
+export interface ExhibitionWeights {
+  weight: number;
+  energy: number;
+  skill: number;
+  durability: number;
+  rarity: number;
+}
+
+export interface Exhibition {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  entryFee: number;
+  weights: ExhibitionWeights;
+  tiers: ExhibitionTier[];
+}
+
+export interface EthicsRecord {
+  id: string;
+  robotId: string;
+  robotName: string;
+  scenarioId: string;
+  scenarioTitle: string;
+  choiceId: string;
+  choiceLabel: string;
+  choiceType: EthicsChoiceType;
+  reputationChange: number;
+  completedAt: number;
+}
+
+export interface ExhibitionRecord {
+  id: string;
+  robotId: string;
+  robotName: string;
+  exhibitionId: string;
+  exhibitionName: string;
+  displayScore: number;
+  rank: number;
+  rankLabel: string;
+  reward: number;
+  reputationChange: number;
+  completedAt: number;
+}
+
+export interface ReputationTier {
+  id: string;
+  name: string;
+  min: number;
+  max: number;
+  color: string;
+  description: string;
+}
+
+export interface IdentityStats {
+  totalMissions: number;
+  missionSuccess: number;
+  missionFail: number;
+  missionByType: Record<MissionType, { success: number; fail: number }>;
+  highDifficultyFails: number;
+  overloadedFails: number;
+  repairCount: number;
+  ethicsScore: number;
+  ethicalChoices: number;
+  unethicalChoices: number;
+  exhibitionCount: number;
+  firstPlaceCount: number;
+  partsInstalled: number;
+  isOverloaded: boolean;
+}
+
+export interface TagEvaluation {
+  tag: IdentityTag;
+  active: boolean;
+  source: string;
+  progress?: { current: number; required: number; label: string };
+}
+
+export interface TimelineEvent {
+  id: string;
+  timestamp: number;
+  delta: number;
+  reputationAfter: number;
+  reason: string;
+  category: 'mission' | 'repair' | 'ethics' | 'exhibition';
+  outcome: 'success' | 'fail' | 'neutral';
+}
+
+export interface RobotIdentityResult {
+  reputation: number;
+  trust: number;
+  rewardMultiplier: number;
+  tier: ReputationTier;
+  stats: IdentityStats;
+  tags: TagEvaluation[];
+  timeline: TimelineEvent[];
+  positiveTagCount: number;
+  negativeTagCount: number;
+}
+
+export interface MissionRecommendation {
+  mission: Mission;
+  adaptability: number;
+  score: number;
+  rewardMultiplier: number;
+  reasons: string[];
+}
+
 export interface RarityConfig {
   name: string;
   probability: number;
@@ -144,6 +318,8 @@ export interface GameState {
   missionRecords: MissionRecord[];
   repairRecords: RepairRecord[];
   assemblyPlans: AssemblyPlan[];
+  ethicsRecords: EthicsRecord[];
+  exhibitionRecords: ExhibitionRecord[];
   config: GameConfig;
   selectedParts: Record<PartType, Part | null>;
 }
@@ -182,6 +358,10 @@ export interface GameActions {
   calculateAdaptability: (robot: Robot, mission: Mission) => number;
   generateRandomPart: (minRarity?: Rarity) => Part;
   openBlindBox: (type: Rarity, free?: boolean) => Part[];
+  recordEthicsDecision: (robotId: string, scenarioId: string, choiceId: string) => EthicsRecord;
+  participateInExhibition: (robotId: string, exhibitionId: string) => ExhibitionRecord;
+  computeRobotIdentity: (robotId: string) => RobotIdentityResult;
+  getRecommendedMissions: (robotId: string) => MissionRecommendation[];
   loadFromStorage: () => void;
   resetGame: () => void;
 }

@@ -17,6 +17,7 @@ import {
   AlertTriangle,
   RotateCcw,
   History,
+  BadgeCheck,
 } from 'lucide-react';
 import { PageContainer } from '../components/PageContainer';
 import { RobotCard } from '../components/RobotCard';
@@ -71,8 +72,12 @@ export function MissionsPage() {
 
   const robots = useGameStore((s) => s.robots);
   const missionRecords = useGameStore((s) => s.missionRecords);
+  const repairRecords = useGameStore((s) => s.repairRecords);
+  const ethicsRecords = useGameStore((s) => s.ethicsRecords);
+  const exhibitionRecords = useGameStore((s) => s.exhibitionRecords);
   const calculateAdaptability = useGameStore((s) => s.calculateAdaptability);
   const executeMission = useGameStore((s) => s.executeMission);
+  const computeRobotIdentity = useGameStore((s) => s.computeRobotIdentity);
   const config = useGameStore((s) => s.config);
 
   const availableRobots = useMemo(() => {
@@ -83,6 +88,20 @@ export function MissionsPage() {
     if (!selectedRobot || !selectedMission) return 0;
     return calculateAdaptability(selectedRobot, selectedMission);
   }, [selectedRobot, selectedMission, calculateAdaptability]);
+
+  const selectedIdentity = useMemo(() => {
+    if (!selectedRobot) return null;
+    return computeRobotIdentity(selectedRobot.id);
+  }, [
+    selectedRobot,
+    computeRobotIdentity,
+    missionRecords,
+    repairRecords,
+    ethicsRecords,
+    exhibitionRecords,
+  ]);
+
+  const multiplier = selectedIdentity?.rewardMultiplier ?? 1;
 
   const handleExecuteMission = () => {
     if (!selectedRobot || !selectedMission) return;
@@ -283,6 +302,48 @@ export function MissionsPage() {
                     <p className="text-xs text-white/40 mt-2 text-center">
                       预计成功率: {successRate}%
                     </p>
+                  </div>
+
+                  <div className="mb-6 flex items-center justify-between p-3 bg-background-tertiary rounded-xl">
+                    <div className="flex items-center gap-2">
+                      <BadgeCheck className="w-4 h-4 text-neon-blue" />
+                      <span className="text-sm text-white/70">身份奖励倍率</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
+                        style={{
+                          color: selectedIdentity?.tier.color,
+                          backgroundColor: `${selectedIdentity?.tier.color}22`,
+                        }}
+                      >
+                        {selectedIdentity?.tier.name}
+                      </span>
+                      <span className="font-mono font-bold text-lg text-neon-orange">
+                        ×{multiplier.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 mb-6">
+                    <div className="bg-background-tertiary rounded-xl p-3 text-center">
+                      <p className="text-xs text-white/50 mb-1">信用点</p>
+                      <p className="font-mono font-bold text-neon-orange">
+                        <span className="text-white/30 line-through text-sm mr-1">
+                          {selectedMission.rewards.credits}
+                        </span>
+                        {Math.round(selectedMission.rewards.credits * multiplier)}
+                      </p>
+                    </div>
+                    <div className="bg-background-tertiary rounded-xl p-3 text-center">
+                      <p className="text-xs text-white/50 mb-1">材料</p>
+                      <p className="font-mono font-bold text-neon-green">
+                        <span className="text-white/30 line-through text-sm mr-1">
+                          {selectedMission.rewards.materials}
+                        </span>
+                        {Math.round(selectedMission.rewards.materials * multiplier)}
+                      </p>
+                    </div>
                   </div>
 
                   {selectedRobot.isOverloaded && (
